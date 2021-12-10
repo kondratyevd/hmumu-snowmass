@@ -20,6 +20,29 @@ TEV_OPTIONS = [13, 14]
 
 COMBINE_OPTIONS = "-L lib/HMuMuRooPdfs_cc.so --X-rtd FITTER_NEWER_GIVE_UP --X-rtd FITTER_NEW_CROSSING_ALGO --cminDefaultMinimizerStrategy 0 --cminRunAllDiscreteCombinations --cminApproxPreFitTolerance=0.01 --cminFallbackAlgo Minuit2,Migrad,0:0.01 --cminFallbackAlgo Minuit2,Migrad,0:0.1 --X-rtd MINIMIZER_MaxCalls=9999999 --X-rtd MINIMIZER_analytic --X-rtd FAST_VERTICAL_MORPH --cminDefaultMinimizerTolerance 0.01 --X-rtd MINIMIZER_freezeDisassociatedParams"
 
+YIELD_SCALES_13TeV = {
+    "ggH_hmm_ggH": 1.0,
+    "ggH_hmm_VBF": 1.0,
+    "qqH_hmm_ggH": 1.0,
+    "qqH_hmm_VBF": 1.0,
+    "DYJ01": 1.0,
+    "DYJ2": 1.0,
+    "EWKZ": 1.0,
+    "Top": 1.0,
+    "bkg": 1.0,
+}
+
+YIELD_SCALES_14TeV = {
+    "ggH_hmm_ggH": 1.2504,
+    "ggH_hmm_VBF": 1.0939,
+    "qqH_hmm_ggH": 1.6220,
+    "qqH_hmm_VBF": 0.6881,
+    "DYJ01": 1.7626,
+    "DYJ2": 1.7626,
+    "EWKZ": 1.20,
+    "Top": 1.5545,
+    "bkg": 1.1533,
+}
 
 def get_significance(args):
     tev = args.pop("tev", 13)
@@ -39,39 +62,17 @@ def get_significance(args):
         )
 
     lumiscale = round(lumi / LUMI_RUN2, 5)
-    substitutions = {"lumiscale": lumiscale}
+    substitutions = {
+        "input_file": "cms_hmm.inputs125.38.root",
+        "input_file_new": "cms_hmm.inputs125.38_new.root",
+        "lumiscale": lumiscale
+    }
 
     if tev == 13:
-        substitutions.update(
-            {
-                "ggH_hmm": 1.0,
-                "qqH_hmm": 1.0,
-                "WH_hmm": 1.0,
-                "ZH_hmm": 1.0,
-                "ttH_hmm": 1.0,
-                "DYJ01": 1.0,
-                "DYJ2": 1.0,
-                "EWKZ": 1.0,
-                "Top": 1.0,
-                "VV": 1.0,
-            }
-        )
+        substitutions.update(YIELD_SCALES_13TeV)
 
     elif tev == 14:
-        substitutions.update(
-            {
-                "ggH_hmm": 1.246,
-                "qqH_hmm": 1.238,
-                "WH_hmm": 1.20,
-                "ZH_hmm": 1.20,
-                "ttH_hmm": 1.40,
-                "DYJ01": 1.139,
-                "DYJ2": 1.139,
-                "EWKZ": 1.20,
-                "Top": 1.421,
-                "VV": 1,
-            }
-        )
+        substitutions.update(YIELD_SCALES_14TeV)
 
     out_name = f"{out_name_prefix}_{tev}TeV_{lumi}fb_{scenario}.txt"
     out_fullpath = out_path + out_name
@@ -265,7 +266,8 @@ if __name__ == "__main__":
     filename = "projections.pkl"
 
     if redo_df:
-        lumi_options = [100, 200, 300, 500, 1000, 1500, 2000, 2500, 3000]
+        #lumi_options = [100, 200, 300, 500, 1000, 1500, 2000, 2500, 3000]
+        lumi_options = [3000]
         tev_options = [14]
         # scenarios = ["S0", "S1", "S2"]
         scenarios = ["S1", "S2"]
@@ -294,7 +296,6 @@ if __name__ == "__main__":
     else:
         df = pd.read_pickle(filename)
 
-    # df["scenario"] = "S0"
     label_2013 = "Predictions after Run 1"
 
     df = pd.concat(
