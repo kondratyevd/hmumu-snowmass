@@ -39,9 +39,9 @@ YIELD_SCALES_14TeV = {
     "qqH_hmm_VBF": 0.6881,
     "DYJ01": 1.7626,
     "DYJ2": 1.7626,
-    "EWKZ": 1.20,
+    "EWKZ": 1.291,
     "Top": 1.5545,
-    "bkg": 1.1533,
+    "bkg": 1.1534,
 }
 
 def get_significance(args):
