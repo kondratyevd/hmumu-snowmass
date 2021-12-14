@@ -65,6 +65,7 @@ def get_significance(args):
     substitutions = {
         "input_file": "cms_hmm.inputs125.38.root",
         "input_file_new": "cms_hmm.inputs125.38_new.root",
+        #"input_file_new": "cms_hmm.inputs125.38.root",
         "lumiscale": lumiscale
     }
 
@@ -135,7 +136,8 @@ def get_significance(args):
         # rescale statistical uncertainties by 1/sqrt(L)
         # - uncertainties on background fit parameters
         # expr = get_unc_scale(unc_name, how="lumi")
-        pass
+        command += "  --freezeParameters pdf_index_ggh --setParameters pdf_index_ggh=0 "
+
     elif scenario == "S2":
         # rescale statistical uncertainties by 1/sqrt(L)
         # - uncertainties on background fit parameters
@@ -156,6 +158,7 @@ def get_significance(args):
                 unc, how="const", args={"factor": max(floor, 1 / np.sqrt(lumiscale))}
             )
             additional_options += f" {expr} "
+        command += "  --freezeParameters pdf_index_ggh --setParameters pdf_index_ggh=0 "
 
     # print(additional_options)
 
