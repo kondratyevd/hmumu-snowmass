@@ -44,6 +44,7 @@ YIELD_SCALES_14TeV = {
     "bkg": 1.1534,
 }
 
+
 def get_significance(args):
     tev = args.pop("tev", 13)
     lumi = args.pop("lumi", 137)
@@ -64,107 +65,88 @@ def get_significance(args):
     lumiscale = round(lumi / LUMI_RUN2, 5)
     substitutions = {
         "input_file": "cms_hmm.inputs125.38.root",
-        "input_file_new": "cms_hmm.inputs125.38_new.root",
-        #"input_file_new": "cms_hmm.inputs125.38.root",
-        "lumiscale": lumiscale
+        "input_file_new": "cms_hmm.inputs125.38_new.root",  # file containing signal models with reduced width
+        "lumiscale": lumiscale,
     }
 
     if tev == 13:
         substitutions.update(YIELD_SCALES_13TeV)
-
     elif tev == 14:
         substitutions.update(YIELD_SCALES_14TeV)
 
-    out_name = f"{out_name_prefix}_{tev}TeV_{lumi}fb_{scenario}.txt"
-    out_fullpath = out_path + out_name
+    if scenario == "S2":
+        substitutions.update({"commentautostats": "#"})
+    else:
+        substitutions.update({"commentautostats": ""})
 
+    # Make datacard from template
     with open("templates/cms_hmm_combination_template.txt", "r") as f:
         tmp = f.read()
 
     custom_text = Template(tmp).substitute(**substitutions)
+
+    # Save datacard
+    out_name = f"{out_name_prefix}_{tev}TeV_{lumi}fb_{scenario}.txt"
+    out_fullpath = out_path + out_name
 
     with open(out_fullpath, "w") as f:
         f.write(custom_text)
 
     print(f"Saved datacard here: {out_fullpath}")
 
+    # Uncertainty groupings
+    group_unc_const = {
+        "pBTag": 0.01,
+        "pScaleJPileup": 0.5,
+        "pLumi": 0.01,
+        "sigTheory": 0.5,
+        "bkgTheory": 0.5,
+    }
+    group_unc_func = {
+        "pBTagStat": 0.0,
+        "pPrefire": 0.0,
+        "pEleID": 0.005,
+        "pMuonID": 0.005,
+        "pScaleJ": 0.5,
+        "pScaleJAbs": 0.2,
+        "pScaleJRel": 0.2,
+        "pResJ": 0.03,
+        # "Others": 0.0,
+    }
+    theory_unc = [
+        "XSecAndNorm*",
+    ]
+    additional_options = ""
+
+    # Rescaling uncertainties
+    if scenario == "S2":
+        for unc, value in group_unc_const.items():
+            expr = get_unc_scale(unc, how="group_const", args={"factor": value})
+            additional_options += f" {expr} "
+        for unc, floor in group_unc_func.items():
+            expr = get_unc_scale(
+                unc,
+                how="group_const",
+                args={"factor": max(floor, 1 / np.sqrt(lumiscale))},
+            )
+            additional_options += f" {expr} "
+        for unc in theory_unc:
+            expr = get_unc_scale(unc, how="const", args={"factor": 0.5})
+            additional_options += f" {expr} "
+
+    # print(scenario, additional_options)
+
+    # Convert datacards to ROOT files for a given uncertainty scenario
+    to_workspace = f"text2workspace.py {out_fullpath} -m 125.38 -L lib/HMuMuRooPdfs_cc.so {additional_options}"
+    subprocess.check_output([to_workspace], shell=True)
+
+    # Produce expected significance
     command = (
         f"combineTool.py -d {out_fullpath} -M Significance -m 125.38 --expectSignal=1 -t -1 "
         + COMBINE_OPTIONS
     )
-    # command = f"combineTool.py -d {out_fullpath} -M MultiDimFit -m 125.38 --rMin -1 --rMax 5 " + COMBINE_OPTIONS
 
-    theory_unc = [
-        "BR_hmm",
-        "EWKZjjPartonShower",
-        "SignalPartonShower",
-        "LHEFac*",
-        "LHERen*",
-        "PDF*",
-        "QCDscale_*",
-        "THU_*",
-        "XSecAndNorm*",
-        "pdf_*",
-    ]
-
-    exp_unc = {
-        #
-        "fewz_*": 0,
-        "CMS_scale_j_*": 0.01,
-        "lumi_*": 0.01,
-        "CMS_eff_*": 0.005,
-        "CMS_lepmva_*": 0.005,
-        "CMS_pileup_*": 0,
-        "CMS_prefiring_*": 0,
-        "CMS_btag_*": 0,
-        "CMS_ps": 0,
-        "CMS_ps*": 0,
-        "CMS_qgl": 0,
-        "CMS_res_*": 0,
-        # "CMS_scale_*": 0,
-        "CMS_trig*": 0,
-        "CMS_ue": 0,
-        "DYModel": 0,
-        "MuScale_*": 0,
-        "prefiring_*": 0,
-        "puWeight_*": 0,
-    }
-    additional_options = ""
-    if scenario == "S0":
-        pass
-    elif scenario == "S1":
-        # rescale statistical uncertainties by 1/sqrt(L)
-        # - uncertainties on background fit parameters
-        # expr = get_unc_scale(unc_name, how="lumi")
-        command += "  --freezeParameters pdf_index_ggh --setParameters pdf_index_ggh=0 "
-
-    elif scenario == "S2":
-        # rescale statistical uncertainties by 1/sqrt(L)
-        # - uncertainties on background fit parameters
-        # rescale theory uncertainties by 0.5
-        # - xSec & normalization
-        # - parton shower
-        # - QCD scale
-        # rescale experimental systematics by max(X, 1/sqrt(L))
-        # - signal fit parameters
-        # - JES and JER
-        # - Lumi
-        for unc in theory_unc:
-            expr = get_unc_scale(unc, how="const", args={"factor": 0.5})
-            additional_options += f" {expr} "
-        for unc, floor in exp_unc.items():
-            # expr = get_unc_scale(unc, how="lumi_floor", args={"floor": floor})
-            expr = get_unc_scale(
-                unc, how="const", args={"factor": max(floor, 1 / np.sqrt(lumiscale))}
-            )
-            additional_options += f" {expr} "
-        command += "  --freezeParameters pdf_index_ggh --setParameters pdf_index_ggh=0 "
-
-    # print(additional_options)
-
-    to_workspace = f"text2workspace.py {out_fullpath} -L lib/HMuMuRooPdfs_cc.so {additional_options}"
-    subprocess.check_output([to_workspace], shell=True)
-
+    # use ROOT file (contains rescaled uncertainties) instead of a datacard
     command = command.replace(".txt", ".root")
 
     significance = float(
@@ -178,12 +160,15 @@ def get_significance(args):
 
 
 def get_unc_scale(name, how="const", args={}):
+    # Different ways to rescale uncertainties
     ret = ""
     if how == "lumi":
+        # 1/sqrt(L)
         label = name.replace("*", "").replace("_", "")
         expr = f'expr::scale{label}("1/sqrt(@0)",lumiscale[1])'
         ret = f"--X-nuisance-function '{name}' '{expr}'"
     elif how == "lumi_floor":
+        # 1/sqrt(L) until floor value is reached
         if "floor" not in args:
             raise Exception
         floor = args["floor"]
@@ -191,14 +176,22 @@ def get_unc_scale(name, how="const", args={}):
         expr = f'expr::scale{label}("max({floor},1/sqrt(@0))",lumiscale[1])'
         ret = f"--X-nuisance-function '{name}' '{expr}'"
     elif how == "const":
+        # rescale single uncertainty by a constant factor
         if "factor" not in args:
             raise Exception
         factor = args["factor"]
         ret = f"--X-rescale-nuisance '{name}' {factor}"
+    elif how == "group_const":
+        # rescale group of uncertainties by a constant factor
+        if "factor" not in args:
+            raise Exception
+        factor = args["factor"]
+        ret = f"--X-nuisance-group-function '{name}' '{factor}'"
     return ret
 
 
 def plot(df_input, params={}):
+    # Plot significance scan
     name = params.pop("name", "test")
     scenarios = params.pop("scenarios", ["S0"])
     smoothen = params.pop("smoothen", True)
@@ -213,8 +206,8 @@ def plot(df_input, params={}):
 
     scenario_titles = {
         "S0": "uncertainties as in Run 2 datacards (not rescaled)",
-        "S1": "Uncertainty scenario 1",
-        "S2": "Uncertainty scenario 2",
+        "S1": "with Run 2 syst. uncert. (S1)",
+        "S2": "with HL-LHC syst. uncert. (S2)",
     }
 
     for s in scenarios:
@@ -269,8 +262,8 @@ if __name__ == "__main__":
     filename = "projections.pkl"
 
     if redo_df:
-        #lumi_options = [100, 200, 300, 500, 1000, 1500, 2000, 2500, 3000]
-        lumi_options = [3000]
+        lumi_options = [100, 200, 300, 500, 1200, 1500, 2000, 2500, 3000]
+        # lumi_options = [3000]
         tev_options = [14]
         # scenarios = ["S0", "S1", "S2"]
         scenarios = ["S1", "S2"]

@@ -358,13 +358,13 @@ CMS_hmm_sigma_cat2_ggh                                  param 0 0.1
 CMS_hmm_sigma_cat2_ttHhad                               param 0 0.1
 CMS_hmm_sigma_cat3_ggh                                  param 0 0.1
 CMS_hmm_sigma_cat4_ggh                                  param 0 0.1
-pdf_index_ggh                                           discrete
-vbf_ch1_vbfHmm_SB autoMCStats 0 1 1
-vbf_ch1_vbfHmm_SR autoMCStats 0 1 1
-vbf_ch2_vbfHmm_SB autoMCStats 0 1 1
-vbf_ch2_vbfHmm_SR autoMCStats 0 1 1
-vbf_ch3_vbfHmm_SB autoMCStats 0 1 1
-vbf_ch3_vbfHmm_SR autoMCStats 0 1 1
+#pdf_index_ggh                                           discrete
+$commentautostats vbf_ch1_vbfHmm_SB autoMCStats 0 1 1
+$commentautostats vbf_ch1_vbfHmm_SR autoMCStats 0 1 1
+$commentautostats vbf_ch2_vbfHmm_SB autoMCStats 0 1 1
+$commentautostats vbf_ch2_vbfHmm_SR autoMCStats 0 1 1
+$commentautostats vbf_ch3_vbfHmm_SB autoMCStats 0 1 1
+$commentautostats vbf_ch3_vbfHmm_SR autoMCStats 0 1 1
 ZH_13TeV extArg $$CMSSW_BASE/src/HiggsAnalysis/CombinedLimit/data/lhc-hxswg/sm/sm_yr4_13TeV.root:xs_13TeV
 qqZH_13TeV extArg $$CMSSW_BASE/src/HiggsAnalysis/CombinedLimit/data/lhc-hxswg/sm/sm_yr4_13TeV.root:xs_13TeV
 hmm extArg $$CMSSW_BASE/src/HiggsAnalysis/CombinedLimit/data/lhc-hxswg/sm/sm_br_yr4.root:br
@@ -544,3 +544,21 @@ nuisance edit freeze xSec14TeV_EWKZ
 nuisance edit freeze xSec14TeV_Top
 nuisance edit freeze xSec14TeV_bkg
 
+pMuonID group = CMS_eff_id_m CMS_eff_iso_m CMS_eff_m CMS_eff_m_trg CMS_lepmva_eff_m 
+pResEle group = CMS_res_e 
+pLumi group = lumi_13TeV_2016 lumi_13TeV_2017 lumi_13TeV_2018 lumi_13TeV_BBD lumi_13TeV_BCC lumi_13TeV_DB lumi_13TeV_GS lumi_13TeV_LS lumi_13TeV_XY 
+pScaleEle group = CMS_scale_e 
+pScaleMuon group = CMS_scale_m MuScale_2016 MuScale_2017 MuScale_2018 CMS_trig_m 
+pResJ group = CMS_res_j_barrel_2016 CMS_res_j_barrel_2017 CMS_res_j_barrel_2018 CMS_res_j_endcap1_2016 CMS_res_j_endcap1_2017 CMS_res_j_endcap1_2018 CMS_res_j_endcap2highpt_2016 CMS_res_j_endcap2highpt_2017 CMS_res_j_endcap2highpt_2018 CMS_res_j_endcap2lowpt_2016 CMS_res_j_endcap2lowpt_2017 CMS_res_j_endcap2lowpt_2018 CMS_res_j_forwardhighpt_2016 CMS_res_j_forwardhighpt_2017 CMS_res_j_forwardhighpt_2018 CMS_res_j_forwardlowpt_2016 CMS_res_j_forwardlowpt_2017 CMS_res_j_forwardlowpt_2018 
+bkgTheory group = EWKZjjPartonShower LHEFacDY LHEFacTop LHEFacEWKZ LHERenDY LHERenEWKZ LHERenTop CMS_ue 
+pScaleJRel group = CMS_scale_j_relativeSample_2016 CMS_scale_j_relativeSample_2017 CMS_scale_j_relativeSample_2018 
+pBTagStat group = CMS_btag_HfStats1 CMS_btag_HfStats2 CMS_btag_LfStats1 CMS_btag_LfStats2 
+pScaleJ group = CMS_scale_j_bbec1 CMS_scale_j_bbec1_2016 CMS_scale_j_bbec1_2017 CMS_scale_j_bbec1_2018 CMS_scale_j_ec2 CMS_scale_j_ec2_2016 CMS_scale_j_ec2_2017 CMS_scale_j_ec2_2018 CMS_scale_j_flavorQCD CMS_scale_j_hf CMS_scale_j_hf_2016 CMS_scale_j_hf_2017 CMS_scale_j_hf_2018 
+sigTheory group = THU_ggH_Mig01 THU_ggH_Mig12 THU_ggH_Mu THU_ggH_PT120 THU_ggH_PT60 THU_ggH_Res THU_ggH_VBF2j THU_ggH_qmtop THU_VBF_Jet01 THU_VBF_Mjj1000 THU_VBF_Mjj120 THU_VBF_Mjj1500 THU_VBF_Mjj350 THU_VBF_Mjj60 THU_VBF_Mjj700 THU_VBF_PTH200 THU_VBF_Pt25 THU_VBF_TOT THU_VBF_Yield QCDscale_WH QCDscale_ZH QCDscale_ggH QCDscale_ggZH QCDscale_qqH QCDscale_tHW QCDscale_tHq QCDscale_ttH pdf_Higgs_gg pdf_Higgs_qqbar pdf_Higgs_tHW pdf_Higgs_tHq pdf_Higgs_ttH CMS_ps CMS_ps_fsr CMS_ps_isr LHEFacHmm LHERenHmm QCDscale_WH_ACCEPT QCDscale_ZH_ACCEPT QCDscale_bbH_ACCEPT QCDscale_ggH_ACCEPT QCDscale_qqH_ACCEPT QCDscale_tHW_ACCEPT QCDscale_tHq_ACCEPT QCDscale_ttH_ACCEPT BR_hmm QCDscale_pdf_bbH 
+pEleID group = CMS_eff_e CMS_lepmva_eff_e 
+pBTag group = CMS_btag_CfErr1 CMS_btag_CfErr2 CMS_btag_Hf CMS_btag_HfStats1 CMS_btag_HfStats2 CMS_btag_jes CMS_btag_Lf CMS_btag_LfStats1 CMS_btag_LfStats2 CMS_eff_btag 
+sigInc group = THU_ggH_Mu THU_ggH_Res QCDscale_WH QCDscale_ZH QCDscale_ggH QCDscale_ggZH QCDscale_qqH QCDscale_tHW QCDscale_tHq QCDscale_ttH pdf_Higgs_gg pdf_Higgs_qqbar pdf_Higgs_tHW pdf_Higgs_tHq pdf_Higgs_ttH 
+pPrefire group = prefiring_2016 prefiring_2017 CMS_prefiring_2016 CMS_prefiring_2017 
+pScaleJPileup group = puWeight_2016 puWeight_2017 puWeight_2018 
+pScaleJMethod group = CMS_scale_j_relativeBal 
+pScaleJAbs group = CMS_scale_j_absolute CMS_scale_j_absolute_2016 CMS_scale_j_absolute_2017 CMS_scale_j_absolute_2018 
