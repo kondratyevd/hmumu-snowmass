@@ -33,7 +33,7 @@ for wname, pdfs in pdfs_dict.items():
         mh = w.var("mh_ggh")
 
         sigma_name = pdf.replace("_pdf", "_fsigma")
-        sigma_val = w.function(pdf.replace("_pdf", "_fsigma")).getVal() / 1.63
+        sigma_val = w.function(pdf.replace("_pdf", "_fsigma")).getVal() / 1.46
         new_sigma = rt.RooRealVar(
             sigma_name, sigma_name, sigma_val, sigma_val, sigma_val
         )

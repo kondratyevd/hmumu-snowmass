@@ -37,11 +37,11 @@ YIELD_SCALES_14TeV = {
     "ggH_hmm_VBF": 1.0939,
     "qqH_hmm_ggH": 1.6220,
     "qqH_hmm_VBF": 0.6881,
-    "DYJ01": 1.7626,
-    "DYJ2": 1.7626,
+    "DYJ01": 1.922,
+    "DYJ2": 1.922,
     "EWKZ": 1.291,
     "Top": 1.5545,
-    "bkg": 1.1534,
+    "bkg": 1.248,
 }
 
 
@@ -66,6 +66,7 @@ def get_significance(args):
     substitutions = {
         "input_file": "cms_hmm.inputs125.38.root",
         "input_file_new": "cms_hmm.inputs125.38_new.root",  # file containing signal models with reduced width
+        #"input_file_new": "cms_hmm.inputs125.38.root", 
         "lumiscale": lumiscale,
     }
 
