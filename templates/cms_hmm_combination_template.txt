@@ -358,7 +358,7 @@ CMS_hmm_sigma_cat2_ggh                                  param 0 0.1
 CMS_hmm_sigma_cat2_ttHhad                               param 0 0.1
 CMS_hmm_sigma_cat3_ggh                                  param 0 0.1
 CMS_hmm_sigma_cat4_ggh                                  param 0 0.1
-#pdf_index_ggh                                           discrete
+pdf_index_ggh                                           discrete
 $commentautostats vbf_ch1_vbfHmm_SB autoMCStats 0 1 1
 $commentautostats vbf_ch1_vbfHmm_SR autoMCStats 0 1 1
 $commentautostats vbf_ch2_vbfHmm_SB autoMCStats 0 1 1
