@@ -36,7 +36,7 @@ YIELD_SCALES_13TeV = {
 }
 
 # exclusive ggH and VBF channels
-#YIELD_SCALES_14TeV = {
+# YIELD_SCALES_14TeV = {
 #    "ggH_hmm_ggH": 1.2504,
 #    "ggH_hmm_VBF": 1.0939,
 #    "qqH_hmm_ggH": 1.6220,
@@ -46,7 +46,7 @@ YIELD_SCALES_13TeV = {
 #    "EWKZ": 1.291,
 #    "Top": 1.5545,
 #    "bkg": 1.248,
-#}
+# }
 
 # both channels together
 YIELD_SCALES_14TeV = {
@@ -71,8 +71,8 @@ def get_significance(args):
     poi = args.pop("poi", "Significance")
     out_name_prefix = args.pop("out_name_prefix", "cms_hmm_combination")
 
-    if pdf_index>=0:
-        scenario = f"{scenario}_pdf{pdf_index}" 
+    if pdf_index >= 0:
+        scenario = f"{scenario}_pdf{pdf_index}"
 
     try:
         os.mkdir(out_path)
@@ -83,20 +83,27 @@ def get_significance(args):
         raise Exception(
             f"Incorrect energy: {tev}. Should be one of the following: {TEV_OPTIONS}"
         )
-        
-    if poi=="Significance":
+
+    if poi == "Significance":
         datacard_template = "templates/cms_hmm_combination_template.txt"
         text2workspace_arguments = "-m 125.38 -L lib/HMuMuRooPdfs_cc.so"
         setParameters = ""
         freezeParameters = ""
-        combine_arguments = "-M Significance -m 125.38 --expectSignal=1 -t -1" + COMBINE_OPTIONS
-    elif poi=="KappaMuUncertainty":
+        combine_arguments = (
+            "-M Significance -m 125.38 --expectSignal=1 -t -1" + COMBINE_OPTIONS
+        )
+    elif poi == "KappaMuUncertainty":
         datacard_template = "templates/cms_hmm_combination_template_forKappaMu.txt"
         text2workspace_arguments = "-m 125.38 -L lib/HMuMuRooPdfs_cc.so -P HiggsAnalysis.CombinedLimit.LHCHCGModels:K1 --PO dohmm=true"
         setParameters = "--setParameters kappa_b=1,kappa_W=1,kappa_Z=1,kappa_tau=1,kappa_t=1,kappa_mu=1"
-        freezeParameters = "--freezeParameters=kappa_b,kappa_W,kappa_Z,kappa_tau,kappa_t"
-        combine_arguments = "-M MultiDimFit -m 125.38  --algo=singles --bypassFrequentistFit -t -1 --redefineSignalPOIs kappa_mu -n Singles_S2_3invab.totalSyst --setParameterRanges kappa_mu=0.,2. " + COMBINE_OPTIONS_KAPPA_MU
-    if pdf_index>=0:
+        freezeParameters = (
+            "--freezeParameters=kappa_b,kappa_W,kappa_Z,kappa_tau,kappa_t"
+        )
+        combine_arguments = (
+            "-M MultiDimFit -m 125.38  --algo=singles --bypassFrequentistFit -t -1 --redefineSignalPOIs kappa_mu -n Singles_S2_3invab.totalSyst --setParameterRanges kappa_mu=0.,2. "
+            + COMBINE_OPTIONS_KAPPA_MU
+        )
+    if pdf_index >= 0:
         if "--setParameters" in setParameters:
             setParameters += f",pdf_index_ggh={pdf_index}"
         else:
@@ -106,14 +113,13 @@ def get_significance(args):
         else:
             freezeParameters = "--freezeParameters=pdf_index_ggh"
 
-
     lumiscale = round(lumi / LUMI_RUN2, 5)
     substitutions = {
         "input_file": "cms_hmm.inputs125.38.root",
         "input_file_new": "cms_hmm.inputs125.38_new.root",  # file containing signal models with reduced width
-        #"input_file_new": "cms_hmm.inputs125.38.root", 
+        # "input_file_new": "cms_hmm.inputs125.38.root",
         "lumiscale": lumiscale,
-        "commentautostats": ""
+        "commentautostats": "",
     }
 
     if tev == 13:
@@ -187,24 +193,27 @@ def get_significance(args):
 
     subprocess.check_output([to_workspace], shell=True)
 
-
-    command = (f"combineTool.py -d {out_fullpath} {combine_arguments} {setParameters} {freezeParameters}")
+    command = f"combineTool.py -d {out_fullpath} {combine_arguments} {setParameters} {freezeParameters}"
     # use ROOT file (contains rescaled uncertainties) instead of a datacard
     command = command.replace(".txt", ".root")
 
-    if poi=="Significance":
+    if poi == "Significance":
         value = float(
             subprocess.check_output([f"{command} | grep Significance:"], shell=True)
             .decode("utf-8")
             .replace("Significance: ", "")
         )
-    elif poi=="KappaMuUncertainty":
-        output = subprocess.check_output([f"{command} | grep 'kappa_mu :'"], shell=True).decode("utf-8").replace("kappa_mu : ", "").replace("(68%)", "")
-        values = [v for v in output.split(" ") if len(v)>0]
+    elif poi == "KappaMuUncertainty":
+        output = (
+            subprocess.check_output([f"{command} | grep 'kappa_mu :'"], shell=True)
+            .decode("utf-8")
+            .replace("kappa_mu : ", "")
+            .replace("(68%)", "")
+        )
+        values = [v for v in output.split(" ") if len(v) > 0]
         values = [v for v in values if "/" in v][0].split("/")
         values = [float(v) for v in values]
-        value = (abs(values[0])+abs(values[1]))/2
-
+        value = (abs(values[0]) + abs(values[1])) / 2
 
     ret = {
         "tev": tev,
@@ -283,8 +292,8 @@ def plot(df_input, params={}):
         else:
             label = s
 
-        #opts = {"linewidth": 2}
-        #opts_marker = {"marker": "s", "linewidth": 0, "markersize": 10}
+        # opts = {"linewidth": 2}
+        # opts_marker = {"marker": "s", "linewidth": 0, "markersize": 10}
         opts = {"linewidth": 2, "marker": "o", "markersize": 10}
         if ("2013" in label) or ("Run 1" in label):
             opts = {"marker": "^", "color": "black", "linewidth": 0, "markersize": 10}
@@ -294,7 +303,7 @@ def plot(df_input, params={}):
         else:
             opts["markerfacecolor"] = "none"
 
-        smoothen=False
+        smoothen = False
         if len(df.lumi.values) < 4:
             smoothen = False
         if smoothen:
@@ -309,15 +318,20 @@ def plot(df_input, params={}):
         else:
             ax.plot(df.lumi, df.value, label=label, **opts)
 
-    hep.cms.label(llabel="Phase-2 Projection Preliminary", rlabel="3000$\mathrm{fb^{-1}}$(14 TeV)", fontsize=20, loc=2)
+    hep.cms.label(
+        llabel="Phase-2 Projection Preliminary",
+        rlabel="3000$\mathrm{fb^{-1}}$(14 TeV)",
+        fontsize=20,
+        loc=2,
+    )
     labels = {
         "Significance": "Expected significance",
-        "KappaMuUncertainty": r"Total $\kappa_\mu$ uncert."
+        "KappaMuUncertainty": r"Total $\kappa_\mu$ uncert.",
     }
     plt.xlabel(r"L [$\mathrm{fb^{-1}}$]")
     plt.ylabel(labels[poi])
     plt.xlim([0, df_input.lumi.max() * 1.1])
-    if poi=="KappaMuUncertainty":
+    if poi == "KappaMuUncertainty":
         plt.ylim([0, 0.35])
         legend_loc = "center right"
     else:
@@ -325,7 +339,7 @@ def plot(df_input, params={}):
         legend_loc = "lower right"
 
     plt.legend(
-        #loc="best",
+        # loc="best",
         loc=legend_loc,
         prop={"size": "x-small"},
     )
@@ -344,22 +358,28 @@ if __name__ == "__main__":
 
     if redo_df:
         lumi_options = [100, 200, 300, 500, 1000, 1500, 2000, 2500, 3000]
-        #lumi_options = [3000]
+        # lumi_options = [3000]
         tev_options = [14]
         scenarios = ["S1", "S2"]
-        #pdf_options = [-1, 0, 1, 2]
+        # pdf_options = [-1, 0, 1, 2]
         pdf_options = [-1]
         pois = ["Significance", "KappaMuUncertainty"]
-        #pois = ["KappaMuUncertainty"]
+        # pois = ["KappaMuUncertainty"]
         arglist = []
         for lumi in lumi_options:
             for tev in tev_options:
                 for s in scenarios:
                     for pdf in pdf_options:
-                        if (pdf>=0) and (s!="S2"):
+                        if (pdf >= 0) and (s != "S2"):
                             continue
                         for poi in pois:
-                            argset = {"tev": tev, "lumi": lumi, "scenario": s, "pdf_index": pdf, "poi": poi}
+                            argset = {
+                                "tev": tev,
+                                "lumi": lumi,
+                                "scenario": s,
+                                "pdf_index": pdf,
+                                "poi": poi,
+                            }
                             arglist.append(argset)
 
         client = Client(
@@ -386,7 +406,13 @@ if __name__ == "__main__":
     df = pd.concat(
         [
             pd.DataFrame(
-                {"tev": 14, "lumi": 0, "poi": "Significance", "value": 0, "scenario": ["S1", "S2"]},
+                {
+                    "tev": 14,
+                    "lumi": 0,
+                    "poi": "Significance",
+                    "value": 0,
+                    "scenario": ["S1", "S2"],
+                },
                 index=[-100, -101],
             ),
             df,
@@ -415,10 +441,10 @@ if __name__ == "__main__":
     print(df)
     for poi in ["Significance", "KappaMuUncertainty"]:
         parameters = {
-            #"scenarios": ["S1", "S2", "S2_pdf0", "S2_pdf1", "S2_pdf2", label_2013],
+            # "scenarios": ["S1", "S2", "S2_pdf0", "S2_pdf1", "S2_pdf2", label_2013],
             "scenarios": ["S1", "S2", label_2013, "YR 2018 - S1", "YR 2018 - S2"],
             "poi": poi,
         }
-        plot(df.loc[df.poi==poi], parameters)
+        plot(df.loc[df.poi == poi], parameters)
     tock = time.time()
     print(f"Completed in {round(tock-tick, 3)} s.")
