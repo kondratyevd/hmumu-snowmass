@@ -16,50 +16,19 @@ style = hep.style.CMS
 # style["mathtext.default"] = "rm"
 plt.style.use(style)
 
+from configuration import (
+    yield_scales,
+    root_files,
+    templates,
+    autoMCstats,
+)
+
 LUMI_RUN2 = 137
 TEV_OPTIONS = [13, 14]
 
 COMBINE_OPTIONS = " -L lib/HMuMuRooPdfs_cc.so --X-rtd FITTER_NEWER_GIVE_UP --X-rtd FITTER_NEW_CROSSING_ALGO --cminDefaultMinimizerStrategy 0 --cminRunAllDiscreteCombinations --cminApproxPreFitTolerance=0.01 --cminFallbackAlgo Minuit2,Migrad,0:0.01 --cminFallbackAlgo Minuit2,Migrad,0:0.1 --X-rtd MINIMIZER_MaxCalls=9999999 --X-rtd MINIMIZER_analytic --X-rtd FAST_VERTICAL_MORPH --cminDefaultMinimizerTolerance 0.01 --X-rtd MINIMIZER_freezeDisassociatedParams"
 
 COMBINE_OPTIONS_KAPPA_MU = "-L lib/HMuMuRooPdfs_cc.so --X-rtd FITTER_NEWER_GIVE_UP --X-rtd FITTER_NEW_CROSSING_ALGO --cminDefaultMinimizerStrategy 0 --cminRunAllDiscreteCombinations --cminApproxPreFitTolerance=0.01 --cminFallbackAlgo Minuit2,Migrad,0:0.01 --cminFallbackAlgo Minuit2,Migrad,0:0.1 --X-rtd MINIMIZER_MaxCalls=9999999 --X-rtd MINIMIZER_analytic --X-rtd FAST_VERTICAL_MORPH --cminDefaultMinimizerTolerance 0.01 --X-rtd MINIMIZER_freezeDisassociatedParams --robustFit=1"
-
-YIELD_SCALES_13TeV = {
-    "ggH_hmm_ggH": 1.0,
-    "ggH_hmm_VBF": 1.0,
-    "qqH_hmm_ggH": 1.0,
-    "qqH_hmm_VBF": 1.0,
-    "DYJ01": 1.0,
-    "DYJ2": 1.0,
-    "EWKZ": 1.0,
-    "Top": 1.0,
-    "bkg": 1.0,
-}
-
-# exclusive ggH and VBF channels
-# YIELD_SCALES_14TeV = {
-#    "ggH_hmm_ggH": 1.2504,
-#    "ggH_hmm_VBF": 1.0939,
-#    "qqH_hmm_ggH": 1.6220,
-#    "qqH_hmm_VBF": 0.6881,
-#    "DYJ01": 1.922,
-#    "DYJ2": 1.922,
-#    "EWKZ": 1.291,
-#    "Top": 1.5545,
-#    "bkg": 1.248,
-# }
-
-# both channels together
-YIELD_SCALES_14TeV = {
-    "ggH_hmm_ggH": 1.246,
-    "ggH_hmm_VBF": 1.238,
-    "qqH_hmm_ggH": 1.246,
-    "qqH_hmm_VBF": 1.238,
-    "DYJ01": 1.242,
-    "DYJ2": 1.242,
-    "EWKZ": 1.296,
-    "Top": 1.421,
-    "bkg": 1.256,
-}
 
 
 def get_significance(args):
@@ -70,6 +39,7 @@ def get_significance(args):
     out_path = args.pop("out_path", "datacards/")
     poi = args.pop("poi", "Significance")
     out_name_prefix = args.pop("out_name_prefix", "cms_hmm_combination")
+    channel = args.pop("channel", None)
 
     if pdf_index >= 0:
         scenario = f"{scenario}_pdf{pdf_index}"
@@ -84,8 +54,48 @@ def get_significance(args):
             f"Incorrect energy: {tev}. Should be one of the following: {TEV_OPTIONS}"
         )
 
+    if (poi != "Significance") & (channel != "inclusive"):
+        return {}
+    if ("Run_2" in scenario) & (channel != "inclusive"):
+        return {}
+    if "Run_2" in scenario:
+        tev = 13
+
+    lumiscale = round(lumi / LUMI_RUN2, 5)
+
+    # -------------- Make datacard from template --------------
+    datacard_template = templates[poi][channel]
+    substitutions = {
+        "input_file": root_files[channel]["original"],
+        "input_file_new": root_files[channel]["new_mass_res"],
+        "lumiscale": lumiscale,
+        "commentautostats": autoMCstats[scenario],
+    }
+    substitutions.update(yield_scales[tev])
+    if "Run_2" in scenario:
+        substitutions["input_file_new"] = substitutions["input_file"]
+
+    with open(datacard_template, "r") as f:
+        tmp = f.read()
+
+    custom_text = Template(tmp).substitute(**substitutions)
+
+    # Save datacard
+    out_name = f"{out_name_prefix}_{tev}TeV_{lumi}fb_{scenario}_for{poi}.txt"
+    if channel == "ggh":
+        out_name = out_name.replace(".txt", "_ggh.txt")
+    elif channel == "vbf":
+        out_name = out_name.replace(".txt", "_vbf.txt")
+    out_fullpath = out_path + out_name
+
+    with open(out_fullpath, "w") as f:
+        f.write(custom_text)
+
+    print(f"Saved datacard here: {out_fullpath}")
+
+    # -------------- -------------- -------------- --------------
+
     if poi == "Significance":
-        datacard_template = "templates/cms_hmm_combination_template.txt"
         text2workspace_arguments = "-m 125.38 -L lib/HMuMuRooPdfs_cc.so"
         setParameters = ""
         freezeParameters = ""
@@ -93,7 +103,6 @@ def get_significance(args):
             "-M Significance -m 125.38 --expectSignal=1 -t -1" + COMBINE_OPTIONS
         )
     elif poi == "KappaMuUncertainty":
-        datacard_template = "templates/cms_hmm_combination_template_forKappaMu.txt"
         text2workspace_arguments = "-m 125.38 -L lib/HMuMuRooPdfs_cc.so -P HiggsAnalysis.CombinedLimit.LHCHCGModels:K1 --PO dohmm=true"
         setParameters = "--setParameters kappa_b=1,kappa_W=1,kappa_Z=1,kappa_tau=1,kappa_t=1,kappa_mu=1"
         freezeParameters = (
@@ -103,6 +112,16 @@ def get_significance(args):
             "-M MultiDimFit -m 125.38  --algo=singles --bypassFrequentistFit -t -1 --redefineSignalPOIs kappa_mu -n Singles_S2_3invab.totalSyst --setParameterRanges kappa_mu=0.,2. "
             + COMBINE_OPTIONS_KAPPA_MU
         )
+    elif poi == "SignalStrengthUncertainty":
+        text2workspace_arguments = "-m 125.38 -L lib/HMuMuRooPdfs_cc.so"
+        setParameters = ""
+        freezeParameters = ""
+        combine_arguments = (
+            "-M MultiDimFit --algo singles --setParameterRanges r=0.2,2 -m 125.38 --expectSignal=1 -t -1 "
+            + COMBINE_OPTIONS_KAPPA_MU
+        )
+
+    # Option to freeze PDF index in ggH channel
     if pdf_index >= 0:
         if "--setParameters" in setParameters:
             setParameters += f",pdf_index_ggh={pdf_index}"
@@ -112,38 +131,6 @@ def get_significance(args):
             freezeParameters += ",pdf_index_ggh"
         else:
             freezeParameters = "--freezeParameters=pdf_index_ggh"
-
-    lumiscale = round(lumi / LUMI_RUN2, 5)
-    substitutions = {
-        "input_file": "cms_hmm.inputs125.38.root",
-        "input_file_new": "cms_hmm.inputs125.38_new.root",  # file containing signal models with reduced width
-        # "input_file_new": "cms_hmm.inputs125.38.root",
-        "lumiscale": lumiscale,
-        "commentautostats": "",
-    }
-
-    if tev == 13:
-        substitutions.update(YIELD_SCALES_13TeV)
-    elif tev == 14:
-        substitutions.update(YIELD_SCALES_14TeV)
-
-    if "S2" in scenario:
-        substitutions.update({"commentautostats": "#"})
-
-    # Make datacard from template
-    with open(datacard_template, "r") as f:
-        tmp = f.read()
-
-    custom_text = Template(tmp).substitute(**substitutions)
-
-    # Save datacard
-    out_name = f"{out_name_prefix}_{tev}TeV_{lumi}fb_{scenario}_for{poi}.txt"
-    out_fullpath = out_path + out_name
-
-    with open(out_fullpath, "w") as f:
-        f.write(custom_text)
-
-    print(f"Saved datacard here: {out_fullpath}")
 
     # Uncertainty groupings
     group_unc_const = {
@@ -214,11 +201,23 @@ def get_significance(args):
         values = [v for v in values if "/" in v][0].split("/")
         values = [float(v) for v in values]
         value = (abs(values[0]) + abs(values[1])) / 2
+    elif poi == "SignalStrengthUncertainty":
+        output = (
+            subprocess.check_output([f"{command} | grep 'r :'"], shell=True)
+            .decode("utf-8")
+            .replace("r : ", "")
+            .replace("(68%)", "")
+        )
+        values = [v for v in output.split(" ") if len(v) > 0]
+        values = [v for v in values if "/" in v][0].split("/")
+        values = [float(v) for v in values]
+        value = (abs(values[0]) + abs(values[1])) / 2
 
     ret = {
         "tev": tev,
         "lumi": lumi,
         "poi": poi,
+        "channel": channel,
         "scenario": scenario,
         "value": value,
     }
@@ -262,6 +261,7 @@ def plot(df_input, params={}):
     scenarios = params.pop("scenarios", ["S0"])
     smoothen = params.pop("smoothen", True)
     poi = params.pop("poi", "Significance")
+    channels = params.pop("channels", ["inclusive"])
     out_path = params.pop("out_path", "plots/")
     name = poi
 
@@ -271,7 +271,8 @@ def plot(df_input, params={}):
         pass
 
     fig, ax = plt.subplots()
-    fig.set_size_inches(9, 7)
+    # fig.set_size_inches(9, 7)
+    fig.set_size_inches(9, 9)
 
     scenario_titles = {
         "S0": "uncertainties as in Run 2 datacards (not rescaled)",
@@ -280,43 +281,57 @@ def plot(df_input, params={}):
         "S2_pdf0": "S2 with pdf_index=0",
         "S2_pdf1": "S2 with pdf_index=1",
         "S2_pdf2": "S2 with pdf_index=2",
+        "Run_2_sensitivity": "Run 2 sensitivity",
     }
 
     for s in scenarios:
-        df = df_input.loc[df_input.scenario == s]
-        if df.shape[0] == 0:
-            continue
+        for c in channels:
+            # if s=="S1" and c=="ggh":
+            #    continue
+            df = df_input.loc[(df_input.scenario == s) & (df_input.channel == c)]
+            # print(s, c, df)
+            if df.shape[0] == 0:
+                continue
 
-        if s in scenario_titles:
-            label = scenario_titles[s]
-        else:
-            label = s
+            if s in scenario_titles:
+                label = scenario_titles[s]
+            else:
+                label = s
 
-        # opts = {"linewidth": 2}
-        # opts_marker = {"marker": "s", "linewidth": 0, "markersize": 10}
-        opts = {"linewidth": 2, "marker": "o", "markersize": 10}
-        if ("2013" in label) or ("Run 1" in label):
-            opts = {"marker": "^", "color": "black", "linewidth": 0, "markersize": 10}
-        elif "YR" in label:
-            opts["marker"] = "^"
-            opts["linewidth"] = 0
-        else:
-            opts["markerfacecolor"] = "none"
+            ccap = {"ggh": "ggH", "vbf": "VBF"}
+            if c != "inclusive":
+                label += f": {ccap[c]} channel"
 
-        smoothen = False
-        if len(df.lumi.values) < 4:
+            # opts = {"linewidth": 2}
+            # opts_marker = {"marker": "s", "linewidth": 0, "markersize": 10}
+            opts = {"linewidth": 2, "marker": "o", "markersize": 10}
+            if ("2013" in label) or ("Run 1" in label):
+                opts = {
+                    "marker": "^",
+                    "color": "black",
+                    "linewidth": 0,
+                    "markersize": 10,
+                }
+            elif "YR" in label:
+                opts["marker"] = "^"
+                opts["linewidth"] = 0
+            else:
+                opts["markerfacecolor"] = "none"
+
             smoothen = False
-        if smoothen:
-            smooth = interp1d(
-                df.lumi.values.tolist(), df.value.values.tolist(), kind="cubic"
-            )
-            xmin = round(df.lumi.min())
-            xmax = round(df.lumi.max())
-            x = list(range(xmin, xmax))
-            ax.plot(x, smooth(x), **opts)
-            ax.plot(df.lumi, df.value, label=label, **opts_marker)
-        else:
-            ax.plot(df.lumi, df.value, label=label, **opts)
+            if len(df.lumi.values) < 4:
+                smoothen = False
+            if smoothen:
+                smooth = interp1d(
+                    df.lumi.values.tolist(), df.value.values.tolist(), kind="cubic"
+                )
+                xmin = round(df.lumi.min())
+                xmax = round(df.lumi.max())
+                x = list(range(xmin, xmax))
+                ax.plot(x, smooth(x), **{"linewidth": 2})
+                ax.plot(df.lumi, df.value, label=label, **opts)
+            else:
+                ax.plot(df.lumi, df.value, label=label, **opts)
 
     hep.cms.label(
         llabel="Phase-2 Projection Preliminary",
@@ -327,16 +342,22 @@ def plot(df_input, params={}):
     labels = {
         "Significance": "Expected significance",
         "KappaMuUncertainty": r"Total $\kappa_\mu$ uncert.",
+        "SignalStrengthUncertainty": r"Total $\sigma/\sigma_{SM}$ uncert.",
     }
     plt.xlabel(r"L [$\mathrm{fb^{-1}}$]")
     plt.ylabel(labels[poi])
     plt.xlim([0, df_input.lumi.max() * 1.1])
-    if poi == "KappaMuUncertainty":
+    if poi == "Significance":
+        # plt.ylim([0, df_input.value.max() * 1.1])
+        plt.ylim([0, 15])
+        legend_loc = "lower right"
+
+    elif poi == "KappaMuUncertainty":
         plt.ylim([0, 0.35])
         legend_loc = "center right"
-    else:
-        plt.ylim([0, df_input.value.max() * 1.2])
-        legend_loc = "lower right"
+    elif poi == "SignalStrengthUncertainty":
+        plt.ylim([0, 0.5])
+        legend_loc = "center right"
 
     plt.legend(
         # loc="best",
@@ -353,32 +374,37 @@ def plot(df_input, params={}):
 if __name__ == "__main__":
     tick = time.time()
 
-    redo_df = True
-    filename = "projections.pkl"
+    redo_df = False
+    # redo_df = True
+    # filename = "projections.pkl"
+    filename = "projections_jan19.pkl"
 
     if redo_df:
         lumi_options = [100, 200, 300, 500, 1000, 1500, 2000, 2500, 3000]
-        # lumi_options = [3000]
+        # lumi_options = [137, 300]
+        # lumi_options = [300, 400, 500, 600, 700]
         tev_options = [14]
         scenarios = ["S1", "S2"]
-        # pdf_options = [-1, 0, 1, 2]
-        pdf_options = [-1]
-        pois = ["Significance", "KappaMuUncertainty"]
+        # scenarios = ["S1", "S2", "Run_2_sensitivity"]
+        # scenarios = ["Run_2_sensitivity"]
+        channels = ["inclusive", "ggh", "vbf"]
+        # channels = ["inclusive"]
+        pois = ["Significance", "KappaMuUncertainty", "SignalStrengthUncertainty"]
         # pois = ["KappaMuUncertainty"]
+        # pois = ["Significance"]
+        # pois = ["SignalStrengthUncertainty"]
         arglist = []
         for lumi in lumi_options:
             for tev in tev_options:
                 for s in scenarios:
-                    for pdf in pdf_options:
-                        if (pdf >= 0) and (s != "S2"):
-                            continue
+                    for c in channels:
                         for poi in pois:
                             argset = {
                                 "tev": tev,
                                 "lumi": lumi,
                                 "scenario": s,
-                                "pdf_index": pdf,
                                 "poi": poi,
+                                "channel": c,
                             }
                             arglist.append(argset)
 
@@ -392,8 +418,12 @@ if __name__ == "__main__":
         futures = client.map(get_significance, arglist)
         results = client.gather(futures)
 
-        df = pd.DataFrame(columns=["tev", "lumi", "scenario", "poi", "value"])
+        df = pd.DataFrame(
+            columns=["tev", "lumi", "scenario", "poi", "channel", "value"]
+        )
         for i, r in enumerate(results):
+            if not r:
+                continue
             df = pd.concat([df, pd.DataFrame(r, index=[i])])
 
         df.to_pickle(filename)
@@ -411,9 +441,10 @@ if __name__ == "__main__":
                     "lumi": 0,
                     "poi": "Significance",
                     "value": 0,
-                    "scenario": ["S1", "S2"],
+                    "scenario": ["S1", "S2", "S1", "S2", "S1", "S2"],
+                    "channel": ["inclusive", "inclusive", "ggh", "ggh", "vbf", "vbf"],
                 },
-                index=[-100, -101],
+                index=[-100, -101, -102, -103, -104, -105],
             ),
             df,
             pd.DataFrame(
@@ -423,6 +454,7 @@ if __name__ == "__main__":
                     "poi": "Significance",
                     "value": [2.5, 7.9],
                     "scenario": label_2013,
+                    "channel": "inclusive",
                 },
                 index=[100, 101],
             ),
@@ -433,17 +465,42 @@ if __name__ == "__main__":
                     "poi": "KappaMuUncertainty",
                     "value": [0.067, 0.05],
                     "scenario": ["YR 2018 - S1", "YR 2018 - S2"],
+                    "channel": "inclusive",
+                },
+                index=[100, 101],
+            ),
+            pd.DataFrame(
+                {
+                    "tev": 14,
+                    "lumi": 3000,
+                    "poi": "SignalStrengthUncertainty",
+                    "value": [0.128, 0.096],
+                    "scenario": ["YR 2018 - S1", "YR 2018 - S2"],
+                    "channel": "inclusive",
                 },
                 index=[100, 101],
             ),
         ]
     )
     print(df)
-    for poi in ["Significance", "KappaMuUncertainty"]:
+    for poi in ["Significance", "KappaMuUncertainty", "SignalStrengthUncertainty"]:
+        # for poi in ["SignalStrengthUncertainty"]:
         parameters = {
             # "scenarios": ["S1", "S2", "S2_pdf0", "S2_pdf1", "S2_pdf2", label_2013],
-            "scenarios": ["S1", "S2", label_2013, "YR 2018 - S1", "YR 2018 - S2"],
+            "scenarios": [
+                "S1",
+                "S2",
+                label_2013,
+                "YR 2018 - S1",
+                "YR 2018 - S2",
+                "Run_2_sensitivity",
+            ],
+            # "scenarios": ["S1", label_2013, "YR 2018 - S1"],
+            # "scenarios": ["S2", label_2013, "YR 2018 - S2"],
             "poi": poi,
+            # "channels": ["inclusive"],
+            "channels": ["inclusive", "ggh", "vbf"]
+            # "channels": ["ggh"]
         }
         plot(df.loc[df.poi == poi], parameters)
     tock = time.time()
